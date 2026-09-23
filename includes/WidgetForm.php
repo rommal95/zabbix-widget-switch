@@ -202,7 +202,7 @@ class WidgetForm extends CWidgetForm {
 			// ADDITION: Combo ports field
 			->addField(
 			    (new CWidgetFieldTextBox('combo_ports', _('Combo ports')))
-			    	->setDefault('0')
+			    	->setDefault('')
 			);
 
 			for ($p = 1; $p <= 7; $p++) {
@@ -259,10 +259,11 @@ class WidgetForm extends CWidgetForm {
 				->addField(
 					(new CWidgetFieldTextBox('port'.$i.'_trigger_color', sprintf(_('Port %d trigger NOK color'), $i)))
 						->setDefault('#e53e3e')
+				) // <--- ВОТ ЭТОЙ СКОБКИ НЕ ХВАТАЛО
 				// ADDITION: Per-port SFP toggle
 				->addField(
-				    (new \Zabbix\Widgets\Fields\CWidgetFieldCheckBox('port'.$i.'_sfp', sprintf(_('Port %d is SFP'), $i)))
-				    ->setDefault(0)
+					(new \Zabbix\Widgets\Fields\CWidgetFieldCheckBox('port'.$i.'_sfp', sprintf(_('Port %d is SFP'), $i)))
+						->setDefault(0)
 				);
 		}
 
