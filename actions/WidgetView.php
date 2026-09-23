@@ -94,7 +94,7 @@ class WidgetView extends CControllerDashboardWidgetView {
 				$this->formatThreshold($util_high_threshold)
 			);
 		}
-		$ports = $this->loadPortsFromFields($layout['total_ports']);
+		$ports = $this->loadPortsFromFields($layout['total_ports'], $hostid);
 		$host_meta = $this->loadHostMeta($hostid);
 		$summary_item_keys = [
 			'software' => $summary_software_item_key,
