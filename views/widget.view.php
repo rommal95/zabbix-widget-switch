@@ -157,15 +157,21 @@ $head
 $switch->addItem($head);
 $utp_ports = [];
 $sfp_ports = [];
-foreach ($data['ports'] as $port) {
-	$port['__display_index'] = count($utp_ports) + count($sfp_ports) + 1;
-	if (!empty($port['is_sfp'])) {
-		$sfp_ports[] = $port;
-	}
-	else {
-		$utp_ports[] = $port;
-	}
+$__port_n = 0; // <-- ЭТОЙ СТРОКИ НЕ ХВАТАЛО!
+
+foreach ($data['ports'] as &$port) {
+    $__port_n++;
+    $port['__orig_num'] = $__port_n;
+    $port['__display_index'] = $__port_n;
+    if ($__port_n <= $row_count * $columns) {
+        $utp_ports[] = $port;
+    }
+    else {
+        $sfp_ports[] = $port;
+    }
 }
+unset($port); // <-- ОБЯЗАТЕЛЬНО сбрасываем ссылку после цикла
+
 // ADDITION: Zig-zag layout: even ports (2,4,6...) render on top row, odd (1,3,5...) on bottom row
 $__even = array_values(array_filter($utp_ports, static function ($p) { return $p['__orig_num'] % 2 === 0; }));
 $__odd = array_values(array_filter($utp_ports, static function ($p) { return $p['__orig_num'] % 2 === 1; }));
