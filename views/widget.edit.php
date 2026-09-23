@@ -110,7 +110,7 @@ for ($i = 1; $i <= $port_count; $i++) {
 		->addField(new CWidgetFieldTextBoxView($data['fields']['port'.$i.'_trigger_ok_color']))
 		->addField(new CWidgetFieldTextBoxView($data['fields']['port'.$i.'_trigger_color']))
 		// ADDITION: Per-port SFP checkbox view
-		->addField(new CWidgetFieldCheckBoxView($data['fields']['port'.$i.'_sfp']));
+		->addField(new CWidgetFieldSelectView($data['fields']['port'.$i.'_sfp']));
 
 	$form->addFieldset($fieldset);
 }
