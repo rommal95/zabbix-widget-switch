@@ -638,8 +638,65 @@ class WidgetView extends CControllerDashboardWidgetView {
 	private function loadPortsFromFields(int $total_ports, string $hostid): array {
 	    $ports = [];
 	    
+	    // ОТЛАДКА
+	    error_log("=== SWITCH WIDGET DEBUG ===");
+	    error_log("hostid: " . $hostid);
+	    error_log("total_ports: " . $total_ports);
+	    
+	    // Если есть hostid, загрузим все триггеры хоста для автоподстановки
+	    $trigger_map = [];
+	    if ($hostid !== '' && $hostid !== '0') {
+	        $all_triggers = API::Trigger()->get([
+	            'output' => ['triggerid', 'description'],
+	            'hostids' => [$hostid],
+	            'filter' => ['value' => [0, 1]],
+	            'limit' => 1000
+	        ]);
+	        
+	        error_log("Найдено триггеров: " . count($all_triggers));
+	        
+	        // Выведем первые 5 триггеров для проверки
+	        foreach (array_slice($all_triggers, 0, 5) as $idx => $trigger) {
+	            error_log("Trigger #{$idx}: id=" . $trigger['triggerid'] . ", description=" . $trigger['description']);
+	        }
+	        
+	        // Строим карту: номер порта -> ID триггера "Link down"
+	        foreach ($all_triggers as $trigger) {
+	            $description = (string) ($trigger['description'] ?? '');
+	            if (preg_match('/(?:Port|Порт|Интерфейс|Interface)\s*[:\-]?\s*(\d+)/i', $description, $matches)) {
+	                $port_num = $matches[1];
+	                $is_link_down = preg_match('/link\s*down|линк\s*даун|\bdown\b/i', $description);
+	                
+	                error_log("Найден порт {$port_num} в триггере: {$description} (link_down=" . ($is_link_down ? 'yes' : 'no') . ")");
+	                
+	                if (!isset($trigger_map[$port_num]) || 
+	                    ($is_link_down && !preg_match('/link\s*down|линк\s*даун|\bdown\b/i', $trigger_map[$port_num]['description']))) {
+	                    $trigger_map[$port_num] = [
+	                        'triggerid' => (string) $trigger['triggerid'],
+	                        'description' => $description
+	                    ];
+	                }
+	            }
+	        }
+	        
+	        error_log("Итого портов с триггерами: " . count($trigger_map));
+	        foreach ($trigger_map as $port => $data) {
+	            error_log("Port {$port}: triggerid={$data['triggerid']}, desc={$data['description']}");
+	        }
+	    } else {
+	        error_log("hostid пустой или '0', пропускаем загрузку триггеров");
+	    }
+	    
 	    for ($i = 1; $i <= $total_ports; $i++) {
 	        $triggerid_raw = trim((string) ($this->fields_values['port'.$i.'_triggerid'] ?? ''));
+	        
+	        error_log("Port {$i}: field_value='{$triggerid_raw}'");
+	        
+	        // Если поле пустое, пытаемся подставить триггер автоматически
+	        if ($triggerid_raw === '' && isset($trigger_map[$i])) {
+	            $triggerid_raw = $trigger_map[$i]['triggerid'];
+	            error_log("Port {$i}: подставлен триггер {$triggerid_raw}");
+	        }
 	        
 	        $ports[] = [
 	            'name' => trim((string) ($this->fields_values['port'.$i.'_name'] ?? sprintf('Port %d', $i))),
