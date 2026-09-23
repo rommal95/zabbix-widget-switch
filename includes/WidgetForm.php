@@ -259,7 +259,7 @@ class WidgetForm extends CWidgetForm {
 				->addField(
 					(new CWidgetFieldTextBox('port'.$i.'_trigger_color', sprintf(_('Port %d trigger NOK color'), $i)))
 						->setDefault('#e53e3e')
-				) // <--- ВОТ ЭТОЙ СКОБКИ НЕ ХВАТАЛО
+				)
 				// ADDITION: Per-port SFP toggle
 				->addField(
 					(new \Zabbix\Widgets\Fields\CWidgetFieldCheckBox('port'.$i.'_sfp', sprintf(_('Port %d is SFP'), $i)))
