@@ -32,7 +32,6 @@
 	}
 
 		function getHostId() {
-		console.log('[Switch Widget] Начинаю поиск hostid...');
 		
 		const selectors = [
 			'input[name="fields[override_hostid][]"]',
@@ -63,7 +62,6 @@
 			for (const input of document.querySelectorAll(selector)) {
 				const hostid = extractHostId(input.value);
 				if (hostid !== '') {
-					console.log('[Switch Widget] ✅ Успех! Найден hostid:', hostid, 'в селекторе:', selector);
 					return hostid;
 				}
 			}
@@ -84,13 +82,11 @@
 			if (token && token.dataset && token.dataset.id) {
 				const hostid = extractHostId(token.dataset.id);
 				if (hostid !== '') {
-					console.log('[Switch Widget] ✅ Успех! Найден hostid в токене:', hostid);
 					return hostid;
 				}
 			}
 		}
 
-		console.log('[Switch Widget] ❌ hostid не найден ни в одном из известных полей. Возвращаю пустую строку.');
 		return '';
 	}
 
