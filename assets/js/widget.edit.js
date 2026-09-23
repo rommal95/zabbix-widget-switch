@@ -52,7 +52,7 @@
 			'#hostids_ms input[type="hidden"]',
 			'[id^="hostids"] input[type="hidden"]',
 			'[data-name="hostids"] input[type="hidden"]',
-			// Дополнительные селекторы для унаследованных из шаблона полей
+			// Additional selectors for template-inherited fields
 			'input[name="hostid"]',
 			'input[name="fields[hostid]"]',
 			'input[data-form-field="hostid"]'
@@ -2831,16 +2831,16 @@
 	    const portTriggerMap = {};
 	    if (Array.isArray(triggers)) {
 	        for (const trigger of triggers) {
-	            // Zabbix API возвращает 'id' и 'name' (а не triggerid/description)
+	            // Zabbix API returns 'id' and 'name' (not triggerid/description)
 	            if (!trigger || !trigger.id || !trigger.name) {
 	                continue;
 	            }
 	
-	            // Ищем "Port X", "Порт X", "Interface X" в названии триггера
+	            // Match "Port X", "Interface X" in trigger name
 	            const match = trigger.name.match(/(?:Port|Порт|Интерфейс|Interface)\s*[:\-]?\s*(\d+)/i);
 	            if (match) {
 	                const portNum = match[1];
-	                // Отдаем приоритет триггерам, в названии которых есть "down" или "даун"
+	                // Prioritize triggers containing "down" in name
 	                const isLinkDown = /link\s*down|линк\s*даун|\bdown\b/i.test(trigger.name);
 	
 	                if (!portTriggerMap[portNum] || (isLinkDown && !/link\s*down|линк\s*даун|\bdown\b/i.test(portTriggerMap[portNum].name))) {
@@ -2853,7 +2853,7 @@
 	        }
 	    }
 	
-	    // Применяем найденные триггеры к полям формы
+	    // Apply matched triggers to form fields
 	    for (const field of getTriggerFields()) {
 	        const portMatch = field.name.match(/port(\d+)_triggerid/i);
 	        if (!portMatch) continue;
@@ -2861,10 +2861,10 @@
 	        const portNum = portMatch[1];
 	        const matchedTrigger = portTriggerMap[portNum];
 	
-	        // Заполняем поле ТОЛЬКО если оно пустое или равно '0' (не перезаписываем ручной выбор)
+	        // Fill field ONLY if empty or '0' (preserve manual selection)
 	        if (matchedTrigger && (field.value === '' || field.value === '0')) {
 	            field.value = matchedTrigger.id;
-	            // Генерируем события, чтобы Zabbix понял, что поле изменилось
+	            // Dispatch events so Zabbix detects the change
 	            field.dispatchEvent(new Event('change', { bubbles: true }));
 	            field.dispatchEvent(new Event('input', { bubbles: true }));
 	        }
@@ -3032,7 +3032,7 @@
 			
 			    const hostid = getHostId();
 			    
-			    // Если hostid пропал (например, очистили поле), сбрасываем триггеры
+			    // If hostid is empty (field cleared), reset triggers
 			    if (hostid === '') {
 			        if (previousHostId !== '') {
 			            applyTriggers([], '');
@@ -3041,9 +3041,9 @@
 			        return;
 			    }
 			
-			    // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Проверяем, есть ли пустые поля триггеров.
-			    // Если поля пустые, мы ОБЯЗАНЫ сделать запрос, даже если hostid не менялся.
-			    // Это решает проблему с шаблонами, где initial загрузка могла пройти раньше, чем появился hostid.
+				// KEY FIX: Check for empty trigger fields.
+				// If fields are empty, we MUST fetch triggers even if hostid hasn't changed.
+				// This solves template dashboard issue where initial load may run before hostid appears.
 			    const hasEmptyTriggers = getTriggerFields().some(f => f.value === '' || f.value === '0');
 			    
 			    if (hostid === previousHostId && !hasEmptyTriggers && !inFlight) {
