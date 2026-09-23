@@ -635,24 +635,58 @@ class WidgetView extends CControllerDashboardWidgetView {
 		return $resolved !== '' ? $resolved : 'NETSWITCH';
 	}
 
-	private function loadPortsFromFields(int $total_ports): array {
+	private function loadPortsFromFields(int $total_ports, string $hostid): array {
 		$ports = [];
-
+		
+		// Если есть hostid, загрузим все триггеры хоста для автоподстановки
+		$trigger_map = [];
+		if ($hostid !== '' && $hostid !== '0') {
+			$all_triggers = API::Trigger()->get([
+				'output' => ['triggerid', 'description'],
+				'hostids' => [$hostid],
+				'filter' => ['value' => [0, 1]], // Все активные триггеры
+				'limit' => 1000
+			]);
+			
+			// Строим карту: номер порта -> ID триггера "Link down"
+			foreach ($all_triggers as $trigger) {
+				$description = (string) ($trigger['description'] ?? '');
+				if (preg_match('/(?:Port|Порт|Интерфейс|Interface)\s*[:\-]?\s*(\d+)/i', $description, $matches)) {
+					$port_num = $matches[1];
+					$is_link_down = preg_match('/link\s*down|линк\s*даун|\bdown\b/i', $description);
+					
+					// Отдаем приоритет "Link down" триггерам
+					if (!isset($trigger_map[$port_num]) || 
+						($is_link_down && !preg_match('/link\s*down|линк\s*даун|\bdown\b/i', $trigger_map[$port_num]['description']))) {
+						$trigger_map[$port_num] = [
+							'triggerid' => (string) $trigger['triggerid'],
+							'description' => $description
+						];
+					}
+				}
+			}
+		}
+		
 		for ($i = 1; $i <= $total_ports; $i++) {
-			$triggerid_raw = (int) ($this->fields_values['port'.$i.'_triggerid'] ?? 0);
-
+			$triggerid_raw = trim((string) ($this->fields_values['port'.$i.'_triggerid'] ?? ''));
+			
+			// Если поле пустое, пытаемся подставить триггер автоматически
+			if ($triggerid_raw === '' && isset($trigger_map[$i])) {
+				$triggerid_raw = $trigger_map[$i]['triggerid'];
+			}
+			
 			$ports[] = [
 				'name' => trim((string) ($this->fields_values['port'.$i.'_name'] ?? sprintf('Port %d', $i))),
-				'triggerid' => $triggerid_raw > 0 ? (string) $triggerid_raw : '',
+				'triggerid' => $triggerid_raw,
 				'default_color' => $this->safeColor((string) ($this->fields_values['port'.$i.'_default_color'] ?? '#d1d5db'), '#d1d5db'),
 				'trigger_ok_color' => $this->safeColor((string) ($this->fields_values['port'.$i.'_trigger_ok_color'] ?? '#22c55e'), '#22c55e'),
 				'trigger_color' => $this->safeColor((string) ($this->fields_values['port'.$i.'_trigger_color'] ?? '#e53e3e'), '#e53e3e')
 			];
 		}
-
+		
 		return $ports;
 	}
-
+	
 	private function getLayout(): array {
 		$row_count = $this->clamp(
 			$this->extractPositiveInt($this->fields_values['row_count'] ?? self::DEFAULT_ROW_COUNT),
