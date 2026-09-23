@@ -198,6 +198,11 @@ class WidgetForm extends CWidgetForm {
 			->addField(
 				(new CWidgetFieldTextBox('sfp_ports', _('SFP ports')))
 					->setDefault('0')
+			)
+			// ADDITION: Combo ports field
+			->addField(
+			    (new CWidgetFieldTextBox('combo_ports', _('Combo ports')))
+			    	->setDefault('0')
 			);
 
 			for ($p = 1; $p <= 7; $p++) {
@@ -254,6 +259,10 @@ class WidgetForm extends CWidgetForm {
 				->addField(
 					(new CWidgetFieldTextBox('port'.$i.'_trigger_color', sprintf(_('Port %d trigger NOK color'), $i)))
 						->setDefault('#e53e3e')
+				// ADDITION: Per-port SFP toggle
+				->addField(
+				    (new \Zabbix\Widgets\Fields\CWidgetFieldCheckBox('port'.$i.'_sfp', sprintf(_('Port %d is SFP'), $i)))
+				    ->setDefault(0)
 				);
 		}
 
