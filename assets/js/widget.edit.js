@@ -2828,51 +2828,52 @@
 		}
 	}
 
-function applyTriggers(triggers, hostid) {
-	currentTriggerHostid = String(hostid || '');
-	currentTriggerOptions = Array.isArray(triggers) ? triggers : [];
-
-	// Создаем карту: номер порта -> ID триггера "Link down"
-	const portTriggerMap = {};
-	if (Array.isArray(triggers)) {
-		for (const trigger of triggers) {
-			if (!trigger || !trigger.id || !trigger.name) {
-				continue;
-			}
-
-			// Ищем "Port X: Link down" или "Порт X: Link down"
-			const match = trigger.name.match(/(?:Port|Порт)\s+(\d+)\s*:/i);
-			if (match) {
-				const portNum = match[1];
-				const isLinkDown = /link\s*down|линк\s*даун/i.test(trigger.name);
-
-				// Отдаем приоритет "Link down" триггеру
-				if (!portTriggerMap[portNum] || (isLinkDown && !/link\s*down|линк\s*даун/i.test(portTriggerMap[portNum].name))) {
-					portTriggerMap[portNum] = {
-						id: trigger.id,
-						name: trigger.name
-					};
-				}
-			}
-		}
+	function applyTriggers(triggers, hostid) {
+	    currentTriggerHostid = String(hostid || '');
+	    currentTriggerOptions = Array.isArray(triggers) ? triggers : [];
+	
+	    const portTriggerMap = {};
+	    if (Array.isArray(triggers)) {
+	        for (const trigger of triggers) {
+	            // Zabbix API возвращает 'id' и 'name' (а не triggerid/description)
+	            if (!trigger || !trigger.id || !trigger.name) {
+	                continue;
+	            }
+	
+	            // Ищем "Port X", "Порт X", "Interface X" в названии триггера
+	            const match = trigger.name.match(/(?:Port|Порт|Интерфейс|Interface)\s*[:\-]?\s*(\d+)/i);
+	            if (match) {
+	                const portNum = match[1];
+	                // Отдаем приоритет триггерам, в названии которых есть "down" или "даун"
+	                const isLinkDown = /link\s*down|линк\s*даун|\bdown\b/i.test(trigger.name);
+	
+	                if (!portTriggerMap[portNum] || (isLinkDown && !/link\s*down|линк\s*даун|\bdown\b/i.test(portTriggerMap[portNum].name))) {
+	                    portTriggerMap[portNum] = {
+	                        id: trigger.id,
+	                        name: trigger.name
+	                    };
+	                }
+	            }
+	        }
+	    }
+	
+	    // Применяем найденные триггеры к полям формы
+	    for (const field of getTriggerFields()) {
+	        const portMatch = field.name.match(/port(\d+)_triggerid/i);
+	        if (!portMatch) continue;
+	
+	        const portNum = portMatch[1];
+	        const matchedTrigger = portTriggerMap[portNum];
+	
+	        // Заполняем поле ТОЛЬКО если оно пустое или равно '0' (не перезаписываем ручной выбор)
+	        if (matchedTrigger && (field.value === '' || field.value === '0')) {
+	            field.value = matchedTrigger.id;
+	            // Генерируем события, чтобы Zabbix понял, что поле изменилось
+	            field.dispatchEvent(new Event('change', { bubbles: true }));
+	            field.dispatchEvent(new Event('input', { bubbles: true }));
+	        }
+	    }
 	}
-
-	// Применяем к полям формы
-	for (const field of getTriggerFields()) {
-		const portMatch = field.name.match(/port(\d+)_triggerid/);
-		if (!portMatch) continue;
-
-		const portNum = portMatch[1];
-		const matchedTrigger = portTriggerMap[portNum];
-
-		// Заполняем только если поле пустое
-		if (matchedTrigger && field.value === '') {
-			field.value = matchedTrigger.id;
-			field.dispatchEvent(new Event('change', { bubbles: true }));
-			field.dispatchEvent(new Event('input', { bubbles: true }));
-		}
-	}
-}
 
 	function fetchTriggers(hostid) {
 		const url = getZabbixPhpUrl();
@@ -3010,47 +3011,59 @@ function applyTriggers(triggers, hostid) {
 			].join('|');
 
 			const refresh = () => {
-				const layoutKey = getLayoutKey();
-				if (!uiBootstrapped || layoutKey !== lastLayoutKey) {
-					migrateLegacyDefaultColors();
-					ensurePresetControls();
-					if (typeof window.switch_widget_apply_preset_if_changed === 'function') {
-						window.switch_widget_apply_preset_if_changed();
-					}
-					ensurePortFieldsetGrid();
-					ensurePortFieldRowsAligned();
-					updatePortFieldsetVisibility();
-
-						for (const field of getColorFields()) {
-							ensureColorPickerForField(field);
-						}
-						ensureEditSections();
-						ensureUtilizationControls();
-						ensureBulkControls();
-						ensureItemPatternAutocomplete();
-
-					uiBootstrapped = true;
-					lastLayoutKey = layoutKey;
-				}
-					const hostid = getHostId();
-				if (hostid === previousHostId || inFlight) {
-					return;
-				}
-
-				previousHostId = hostid;
-				setItemSuggestionHost(hostid);
-				if (hostid === '') {
-					applyTriggers([], '');
-					return;
-				}
-
-				inFlight = true;
-				fetchTriggers(hostid)
-					.then((payload) => applyTriggers(payload.triggers || [], hostid))
-					.catch(() => applyTriggers([], hostid))
-					.finally(() => {
-						inFlight = false;
-					});
+			    const layoutKey = getLayoutKey();
+			    if (!uiBootstrapped || layoutKey !== lastLayoutKey) {
+			        migrateLegacyDefaultColors();
+			        ensurePresetControls();
+			        if (typeof window.switch_widget_apply_preset_if_changed === 'function') {
+			            window.switch_widget_apply_preset_if_changed();
+			        }
+			        ensurePortFieldsetGrid();
+			        ensurePortFieldRowsAligned();
+			        updatePortFieldsetVisibility();
+			
+			        for (const field of getColorFields()) {
+			            ensureColorPickerForField(field);
+			        }
+			        ensureEditSections();
+			        ensureUtilizationControls();
+			        ensureBulkControls();
+			        ensureItemPatternAutocomplete();
+			
+			        uiBootstrapped = true;
+			        lastLayoutKey = layoutKey;
+			    }
+			
+			    const hostid = getHostId();
+			    
+			    // Если hostid пропал (например, очистили поле), сбрасываем триггеры
+			    if (hostid === '') {
+			        if (previousHostId !== '') {
+			            applyTriggers([], '');
+			            previousHostId = '';
+			        }
+			        return;
+			    }
+			
+			    // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Проверяем, есть ли пустые поля триггеров.
+			    // Если поля пустые, мы ОБЯЗАНЫ сделать запрос, даже если hostid не менялся.
+			    // Это решает проблему с шаблонами, где initial загрузка могла пройти раньше, чем появился hostid.
+			    const hasEmptyTriggers = getTriggerFields().some(f => f.value === '' || f.value === '0');
+			    
+			    if (hostid === previousHostId && !hasEmptyTriggers && !inFlight) {
+			        return;
+			    }
+			
+			    previousHostId = hostid;
+			    setItemSuggestionHost(hostid);
+			
+			    inFlight = true;
+			    fetchTriggers(hostid)
+			        .then((payload) => applyTriggers(payload.triggers || [], hostid))
+			        .catch(() => applyTriggers([], hostid))
+			        .finally(() => {
+			            inFlight = false;
+			        });
 			};
 
 			refresh();
