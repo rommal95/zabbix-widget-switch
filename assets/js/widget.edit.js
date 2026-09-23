@@ -2823,11 +2823,57 @@
 		currentTriggerHostid = String(hostid || '');
 		currentTriggerOptions = Array.isArray(triggers) ? triggers : [];
 
+		// 1. Создаем карту: номер порта -> данные триггера
+		const portTriggerMap = {};
+		if (Array.isArray(triggers)) {
+			for (const trigger of triggers) {
+				// ВАЖНО: Zabbix API возвращает 'triggerid' и 'description', а не 'id' и 'name'
+				if (!trigger || !trigger.triggerid || !trigger.description) {
+					continue;
+				}
+
+				// Ищем номер порта в названии (поддерживает "Port 1", "Порт 1", "Interface 1" и т.д.)
+				const match = trigger.description.match(/(?:Port|Порт|Интерфейс|Interface)\s*[:\-]?\s*(\d+)/i);
+				if (match) {
+					const portNum = match[1];
+					const isLinkDown = /down|даун|недоступ|link/i.test(trigger.description);
+
+					// Если для одного порта несколько триггеров, отдаем приоритет "Link down"
+					if (!portTriggerMap[portNum] || (isLinkDown && !/down|даун|недоступ|link/i.test(portTriggerMap[portNum].description))) {
+						portTriggerMap[portNum] = {
+							triggerid: trigger.triggerid,
+							description: trigger.description
+						};
+					}
+				}
+			}
+		}
+
+		// 2. Применяем найденные триггеры к полям виджета
 		for (const field of getTriggerFields()) {
 			const select = ensureSelectForField(field);
-			const initial = String(field.value || select.dataset.initialValue || '');
-			select.value = initial;
-			setSelectLightOptions(select, currentTriggerHostid, initial);
+			const initialValue = String(field.value || select.dataset.initialValue || '');
+
+			// Извлекаем номер порта из имени поля (например, "port1_triggerid" -> "1")
+			const portMatch = field.name.match(/port(\d+)_triggerid/);
+			if (portMatch) {
+				const portNum = portMatch[1];
+				const matchedTrigger = portTriggerMap[portNum];
+
+				// Автозаполняем ТОЛЬКО если поле сейчас пустое (не перезаписываем ручной выбор)
+				if (matchedTrigger && initialValue === '') {
+					field.value = matchedTrigger.triggerid;
+					select.value = matchedTrigger.triggerid;
+					select.dataset.initialValue = matchedTrigger.triggerid;
+
+					// Сообщаем Zabbix, что значение изменилось
+					field.dispatchEvent(new Event('change', { bubbles: true }));
+					select.dispatchEvent(new Event('change', { bubbles: true }));
+				}
+			}
+
+			// Обновляем базовые опции селекта
+			setSelectLightOptions(select, currentTriggerHostid, field.value);
 		}
 	}
 
