@@ -262,8 +262,10 @@ class WidgetForm extends CWidgetForm {
 				)
 				// ADDITION: Per-port SFP toggle
 				->addField(
-					(new \Zabbix\Widgets\Fields\CWidgetFieldCheckBox('port'.$i.'_sfp', sprintf(_('Port %d is SFP'), $i)))
-						->setDefault(0)
+					(new CWidgetFieldSelect('port'.$i.'_sfp', sprintf(_('Port %d is SFP'), $i), [
+						0 => _('No'),
+						1 => _('Yes')
+					]))->setDefault(0)
 				);
 		}
 
