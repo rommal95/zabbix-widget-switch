@@ -2822,73 +2822,14 @@
 	function applyTriggers(triggers, hostid) {
 		currentTriggerHostid = String(hostid || '');
 		currentTriggerOptions = Array.isArray(triggers) ? triggers : [];
-	
+
 		for (const field of getTriggerFields()) {
 			const select = ensureSelectForField(field);
 			const initial = String(field.value || select.dataset.initialValue || '');
 			select.value = initial;
 			setSelectLightOptions(select, currentTriggerHostid, initial);
 		}
-	
-		// Auto-select triggers based on port number matching
-		autoSelectTriggersByPortNumber(triggers);
 	}
-	
-	function autoSelectTriggersByPortNumber(triggers) {
-	if (!Array.isArray(triggers) || triggers.length === 0) {
-		return;
-	}
-
-	const portTriggerMap = {};
-	for (const trigger of triggers) {
-		// ИСПРАВЛЕНО: API Zabbix возвращает 'triggerid' и 'description', а не 'id' и 'name'
-		if (!trigger || !trigger.description || !trigger.triggerid) {
-			continue;
-		}
-
-		const triggerName = trigger.description;
-		// УЛУЧШЕНО: Регулярка теперь ищет и "Port 1", и "Порт 1", и "Интерфейс 1" (на случай разных языков Zabbix)
-		const match = triggerName.match(/(?:Port|Порт|Interface|Интерфейс)\s*[:\-]?\s*(\d+)/i);
-		
-		if (match) {
-			const portNumber = match[1];
-			
-			// Если для одного порта несколько триггеров, отдаем приоритет тем, где есть "down" или "даун" (Link down)
-			const isLinkDown = /down|даун|недоступ/i.test(triggerName);
-			
-			if (!portTriggerMap[portNumber] || (isLinkDown && !/down|даун|недоступ/i.test(portTriggerMap[portNumber]._name))) {
-				portTriggerMap[portNumber] = {
-					id: trigger.triggerid,
-					_name: triggerName
-				};
-			}
-		}
-	}
-
-	// Автозаполнение полей триггеров для каждого порта
-	for (const field of getTriggerFields()) {
-		const portMatch = field.name.match(/port(\d+)_triggerid/);
-		if (!portMatch) {
-			continue;
-		}
-
-		const portNumber = portMatch[1];
-		const triggerData = portTriggerMap[portNumber];
-		
-		// Заполняем только если поле пустое (чтобы не перезаписывать ручной выбор)
-		if (triggerData && field.value === '') {
-			field.value = triggerData.id;
-			field.dispatchEvent(new Event('change', {bubbles: true}));
-			
-			// Обновляем связанный выпадающий список, если он существует
-			const select = field.parentElement?.querySelector('select');
-			if (select) {
-				select.value = triggerData.id;
-				select.dispatchEvent(new Event('change', {bubbles: true}));
-			}
-		}
-	}
-}
 
 	function fetchTriggers(hostid) {
 		const url = getZabbixPhpUrl();
