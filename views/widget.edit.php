@@ -46,6 +46,8 @@ $form->addField(new CWidgetFieldTextBoxView($data['fields']['switch_size']));
 $form->addField(new CWidgetFieldTextBoxView($data['fields']['row_count']));
 $form->addField(new CWidgetFieldTextBoxView($data['fields']['ports_per_row']));
 $form->addField(new CWidgetFieldTextBoxView($data['fields']['sfp_ports']));
+// ADDITION: Combo ports field view
+$form->addField(new CWidgetFieldTextBoxView($data['fields']['combo_ports']));
 $form->addField(new CWidgetFieldTextBoxView($data['fields']['profile1_name']));
 $form->addField(new CWidgetFieldTextBoxView($data['fields']['profile2_name']));
 $form->addField(new CWidgetFieldTextBoxView($data['fields']['profile3_name']));
@@ -106,7 +108,9 @@ for ($i = 1; $i <= $port_count; $i++) {
 		->addField(new CWidgetFieldTextBoxView($data['fields']['port'.$i.'_triggerid']))
 		->addField(new CWidgetFieldTextBoxView($data['fields']['port'.$i.'_default_color']))
 		->addField(new CWidgetFieldTextBoxView($data['fields']['port'.$i.'_trigger_ok_color']))
-		->addField(new CWidgetFieldTextBoxView($data['fields']['port'.$i.'_trigger_color']));
+		->addField(new CWidgetFieldTextBoxView($data['fields']['port'.$i.'_trigger_color']))
+		// ADDITION: Per-port SFP checkbox view
+		->addField(new CWidgetFieldCheckBoxView($data['fields']['port'.$i.'_sfp']));
 
 	$form->addFieldset($fieldset);
 }
