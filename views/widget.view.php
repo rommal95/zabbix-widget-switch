@@ -157,25 +157,32 @@ $head
 $switch->addItem($head);
 $utp_ports = [];
 $sfp_ports = [];
-$__port_n = 0; // <-- ЭТОЙ СТРОКИ НЕ ХВАТАЛО!
 
-foreach ($data['ports'] as &$port) {
-    $__port_n++;
-    $port['__orig_num'] = $__port_n;
-    $port['__display_index'] = $__port_n;
-    if ($__port_n <= $row_count * $columns) {
-        $utp_ports[] = $port;
-    }
-    else {
+foreach ($data['ports'] as $index => $port) {
+    $port_num = $index + 1;
+    $port['__display_index'] = $port_num;
+    
+    if ($port_num <= $row_count * $columns) {
+        $utp_ports[$index] = $port;
+    } else {
         $sfp_ports[] = $port;
     }
 }
-unset($port); // <-- ОБЯЗАТЕЛЬНО сбрасываем ссылку после цикла
 
-// ADDITION: Zig-zag layout: even ports (2,4,6...) render on top row, odd (1,3,5...) on bottom row
-$__even = array_values(array_filter($utp_ports, static function ($p) { return $p['__orig_num'] % 2 === 0; }));
-$__odd = array_values(array_filter($utp_ports, static function ($p) { return $p['__orig_num'] % 2 === 1; }));
-$utp_ports = array_merge($__even, $__odd);
+// Zig-zag layout: even ports (2,4,6...) render on top row, odd (1,3,5...) on bottom row
+// Even ports have odd $index (1, 3, 5...). Odd ports have even $index (0, 2, 4...).
+$top_row_ports = [];
+$bottom_row_ports = [];
+
+foreach ($utp_ports as $index => $port) {
+    if ($index % 2 !== 0) {
+        $top_row_ports[] = $port;
+    } else {
+        $bottom_row_ports[] = $port;
+    }
+}
+
+$utp_ports = array_merge($top_row_ports, $bottom_row_ports);
 
 $util_color_for = static function(?float $util) use ($util_low_threshold, $util_warn_threshold, $util_high_threshold, $util_low_color, $util_warn_color, $util_high_color, $util_na_color): string {
 	if ($util === null) {
