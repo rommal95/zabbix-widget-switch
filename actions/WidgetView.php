@@ -195,8 +195,34 @@ class WidgetView extends CControllerDashboardWidgetView {
 		);
 
 		foreach ($ports as $index => &$port) {
-			$port['is_sfp'] = ($layout['sfp_ports'] > 0 && ($index + 1) >= $sfp_start_index);
-			if ($port['is_sfp'] && $sfp_index_start > 0) {
+			// ADDITION: Parse combo ports from comma-separated string (e.g., "25,26")
+			$combo_ports_str = $this->fields_values['combo_ports'] ?? '';
+			$combo_ports = [];
+			if ($combo_ports_str !== '') {
+			    foreach (explode(',', $combo_ports_str) as $part) {
+			        $part = trim($part);
+			        if (strpos($part, '-') !== false) {
+			            list($start, $end) = explode('-', $part);
+			            for ($p = (int)$start; $p <= (int)$end; $p++) {
+			                $combo_ports[] = $p;
+			            }
+			        } else {
+			            $combo_ports[] = (int)$part;
+			        }
+			    }
+			}
+			
+			foreach ($ports as $index => &$port) {
+			    // USER ADDITION: Mark port as SFP if global count is met OR per-port checkbox is explicitly checked
+			    $port['is_sfp'] = ($layout['sfp_ports'] > 0 && ($index + 1) >= $sfp_start_index) || !empty($this->fields_values['port'.($index + 1).'_sfp']);
+			    
+			    // USER ADDITION: Mark combo ports visually
+			    if (in_array($index + 1, $combo_ports)) {
+			        $port['is_combo'] = true;
+			        $port['name'] = 'Combo ' . $port['name'];
+			    }
+			
+			    if ($port['is_sfp'] && $sfp_index_start > 0) {
 				$mapped_port_index = $sfp_index_start + (($index + 1) - $sfp_start_index);
 			}
 			else {
