@@ -2819,63 +2819,51 @@
 		}
 	}
 
-	function applyTriggers(triggers, hostid) {
-		currentTriggerHostid = String(hostid || '');
-		currentTriggerOptions = Array.isArray(triggers) ? triggers : [];
-	
-		// Создаем карту: номер порта -> данные триггера
-		const portTriggerMap = {};
-		if (Array.isArray(triggers)) {
-			for (const trigger of triggers) {
-				// Zabbix API возвращает 'triggerid' и 'description'
-				if (!trigger || !trigger.triggerid || !trigger.description) {
-					continue;
-				}
-	
-				// Ищем номер порта в названии (поддерживает "Port 1", "Порт 1" и т.д.)
-				const match = trigger.description.match(/(?:Port|Порт|Интерфейс|Interface)\s*[:\-]?\s*(\d+)/i);
-				if (match) {
-					const portNum = match[1];
-					const isLinkDown = /down|даун|недоступ|link/i.test(trigger.description);
-	
-					// Если для одного порта несколько триггеров, отдаем приоритет "Link down"
-					if (!portTriggerMap[portNum] || (isLinkDown && !/down|даун|недоступ|link/i.test(portTriggerMap[portNum].description))) {
-						portTriggerMap[portNum] = {
-							triggerid: trigger.triggerid,
-							description: trigger.description
-						};
-					}
+function applyTriggers(triggers, hostid) {
+	currentTriggerHostid = String(hostid || '');
+	currentTriggerOptions = Array.isArray(triggers) ? triggers : [];
+
+	// Создаем карту: номер порта -> ID триггера "Link down"
+	const portTriggerMap = {};
+	if (Array.isArray(triggers)) {
+		for (const trigger of triggers) {
+			if (!trigger || !trigger.id || !trigger.name) {
+				continue;
+			}
+
+			// Ищем "Port X: Link down" или "Порт X: Link down"
+			const match = trigger.name.match(/(?:Port|Порт)\s+(\d+)\s*:/i);
+			if (match) {
+				const portNum = match[1];
+				const isLinkDown = /link\s*down|линк\s*даун/i.test(trigger.name);
+
+				// Отдаем приоритет "Link down" триггеру
+				if (!portTriggerMap[portNum] || (isLinkDown && !/link\s*down|линк\s*даун/i.test(portTriggerMap[portNum].name))) {
+					portTriggerMap[portNum] = {
+						id: trigger.id,
+						name: trigger.name
+					};
 				}
 			}
-		}
-	
-		// Применяем найденные триггеры к полям виджета
-		for (const field of getTriggerFields()) {
-			const select = ensureSelectForField(field);
-			const initialValue = String(field.value || select.dataset.initialValue || '');
-	
-			// Извлекаем номер порта из имени поля (например, "port1_triggerid" -> "1")
-			const portMatch = field.name.match(/port(\d+)_triggerid/);
-			if (portMatch) {
-				const portNum = portMatch[1];
-				const matchedTrigger = portTriggerMap[portNum];
-	
-				// Автозаполняем ТОЛЬКО если поле сейчас пустое
-				if (matchedTrigger && initialValue === '') {
-					field.value = matchedTrigger.triggerid;
-					select.value = matchedTrigger.triggerid;
-					select.dataset.initialValue = matchedTrigger.triggerid;
-	
-					// Сообщаем Zabbix, что значение изменилось
-					field.dispatchEvent(new Event('change', { bubbles: true }));
-					select.dispatchEvent(new Event('change', { bubbles: true }));
-				}
-			}
-	
-			// Обновляем базовые опции селекта
-			setSelectLightOptions(select, currentTriggerHostid, field.value);
 		}
 	}
+
+	// Применяем к полям формы
+	for (const field of getTriggerFields()) {
+		const portMatch = field.name.match(/port(\d+)_triggerid/);
+		if (!portMatch) continue;
+
+		const portNum = portMatch[1];
+		const matchedTrigger = portTriggerMap[portNum];
+
+		// Заполняем только если поле пустое
+		if (matchedTrigger && field.value === '') {
+			field.value = matchedTrigger.id;
+			field.dispatchEvent(new Event('change', { bubbles: true }));
+			field.dispatchEvent(new Event('input', { bubbles: true }));
+		}
+	}
+}
 
 	function fetchTriggers(hostid) {
 		const url = getZabbixPhpUrl();
