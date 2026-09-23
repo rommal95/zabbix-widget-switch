@@ -26,6 +26,8 @@ $css = implode('', [
 	'.port24-card{position:relative;display:block;text-decoration:none;color:#d8e1ea;background:#11161b;border:1px solid #2b3642;',
 	'border-radius:4px;padding:calc(4px * var(--port24-scale)) calc(4px * var(--port24-scale)) calc(12px * var(--port24-scale)) calc(4px * var(--port24-scale));min-height:calc(44px * var(--port24-scale));box-shadow:inset 0 -1px 0 rgba(255,255,255,.04);}',
 	'.port24-card:hover{border-color:#7b8794;}',
+	// ADDITION: Combo port styling
+	'.port24-card.is-combo{border-color:#fcd34d !important;border-width:2px !important;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%) !important;box-shadow:0 0 10px rgba(252,211,77,0.5) !important;}',
 	'.port24-card.port24-heatmap{box-shadow:inset 0 -3px 0 var(--util-c,#64748B), inset 0 -1px 0 rgba(255,255,255,.04);}',
 	'.port24-jack{height:calc(22px * var(--port24-scale));position:relative;border:1px solid #1f2730;border-radius:2px 2px 4px 4px;',
 	'background:linear-gradient(180deg,#eef3f8 0 20%,#0d1318 20% 100%);overflow:hidden;}',
@@ -164,6 +166,10 @@ foreach ($data['ports'] as $port) {
 		$utp_ports[] = $port;
 	}
 }
+// ADDITION: Zig-zag layout: even ports (2,4,6...) render on top row, odd (1,3,5...) on bottom row
+$__even = array_values(array_filter($utp_ports, static function ($p) { return $p['__orig_num'] % 2 === 0; }));
+$__odd = array_values(array_filter($utp_ports, static function ($p) { return $p['__orig_num'] % 2 === 1; }));
+$utp_ports = array_merge($__even, $__odd);
 
 $util_color_for = static function(?float $util) use ($util_low_threshold, $util_warn_threshold, $util_high_threshold, $util_low_color, $util_warn_color, $util_high_color, $util_na_color): string {
 	if ($util === null) {
@@ -420,8 +426,10 @@ $make_card = static function(array $port) use ($show_utilization_overlay, $util_
 	}
 
 	$card
-		->addClass('port24-card')
-		->setAttribute('style', '--port-color: '.$display_color.';')
+    ->addClass('port24-card')
+	    // ADDITION: Apply combo class if marked
+	    ->addClass(!empty($port['is_combo']) ? 'is-combo' : '')
+	    ->setAttribute('style', '--port-color: '.$display_color.';')
 		->setAttribute('data-port-name', (string) $port['name'])
 		->setAttribute('onmouseenter', $live_select_js)
 		->setAttribute('onclick', $live_select_js)
