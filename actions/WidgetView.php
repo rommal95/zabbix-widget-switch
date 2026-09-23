@@ -211,10 +211,10 @@ class WidgetView extends CControllerDashboardWidgetView {
 			}
 	
 			foreach ($ports as $index => &$port) {
-				// USER ADDITION: Mark port as SFP if global count is met OR per-port checkbox is explicitly checked
+				//  ADDITION: Mark port as SFP if global count is met OR per-port checkbox is explicitly checked
 				$port['is_sfp'] = ($layout['sfp_ports'] > 0 && ($index + 1) >= $sfp_start_index) || !empty($this->fields_values['port'.($index + 1).'_sfp']);
 				
-			// USER ADDITION: Mark combo ports visually
+			//  ADDITION: Mark combo ports visually
 			if (in_array($index + 1, $combo_ports)) {
 				$port['is_combo'] = true;
 				$port['name'] = 'Combo ' . $port['name'];
@@ -638,7 +638,7 @@ class WidgetView extends CControllerDashboardWidgetView {
 	private function loadPortsFromFields(int $total_ports, string $hostid): array {
 	    $ports = [];
 	    
-	    // Загружаем триггеры хоста для автоподстановки
+	    // Load host triggers for auto-assignment
 	    $trigger_map = [];
 	    if ($hostid !== '' && $hostid !== '0') {
 	        $all_triggers = API::Trigger()->get([
@@ -660,7 +660,7 @@ class WidgetView extends CControllerDashboardWidgetView {
 	    for ($i = 1; $i <= $total_ports; $i++) {
 	        $triggerid_raw = trim((string) ($this->fields_values['port'.$i.'_triggerid'] ?? ''));
 	        
-	        // Если поле пустое, подставляем автоматически
+	        // If field is empty, auto-assign trigger
 	        if ($triggerid_raw === '' && isset($trigger_map[$i])) {
 	            $triggerid_raw = $trigger_map[$i];
 	        }
