@@ -2822,12 +2822,61 @@
 	function applyTriggers(triggers, hostid) {
 		currentTriggerHostid = String(hostid || '');
 		currentTriggerOptions = Array.isArray(triggers) ? triggers : [];
-
+	
 		for (const field of getTriggerFields()) {
 			const select = ensureSelectForField(field);
 			const initial = String(field.value || select.dataset.initialValue || '');
 			select.value = initial;
 			setSelectLightOptions(select, currentTriggerHostid, initial);
+		}
+	
+		// Auto-select triggers based on port number matching
+		autoSelectTriggersByPortNumber(triggers);
+	}
+	
+	function autoSelectTriggersByPortNumber(triggers) {
+		if (!Array.isArray(triggers) || triggers.length === 0) {
+			return;
+		}
+	
+		// Build a map of port number to trigger ID
+		const portTriggerMap = {};
+		for (const trigger of triggers) {
+			if (!trigger || !trigger.name || !trigger.id) {
+				continue;
+			}
+	
+			// Extract port number from trigger name (e.g., "Port 1: Link down" -> 1)
+			const match = trigger.name.match(/Port\s+(\d+)/i);
+			if (match) {
+				const portNumber = match[1];
+				if (!portTriggerMap[portNumber]) {
+					portTriggerMap[portNumber] = trigger.id;
+				}
+			}
+		}
+	
+		// Auto-fill trigger fields for each port
+		for (const field of getTriggerFields()) {
+			const portMatch = field.name.match(/port(\d+)_triggerid/);
+			if (!portMatch) {
+				continue;
+			}
+	
+			const portNumber = portMatch[1];
+			const triggerId = portTriggerMap[portNumber];
+			
+			if (triggerId && field.value === '') {
+				field.value = triggerId;
+				field.dispatchEvent(new Event('change', {bubbles: true}));
+				
+				// Update associated select if exists
+				const select = field.parentElement?.querySelector('select');
+				if (select) {
+					select.value = triggerId;
+					select.dispatchEvent(new Event('change', {bubbles: true}));
+				}
+			}
 		}
 	}
 
